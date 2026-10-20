@@ -117,3 +117,43 @@ def import_bank_api(request):
 def agent_runs_api(request):
  c=_company(request); qs=AgentRun.objects.filter(company=c) if c else AgentRun.objects.none()
  return JsonResponse({"runs":[{"id":r.pk,"insight_id":r.insight_id,"status":r.status,"plan":r.plan,"trace":r.trace,"model":r.model_name,"duration_ms":r.duration_ms,"created_at":r.created_at.isoformat()} for r in qs[:50]})
+
+@require_POST
+@csrf_protect
+def import_company_csv_api(request):
+    """Import the anonymized legal-entity CSV supplied for the contest."""
+    import csv
+    f=request.FILES.get("file")
+    if not f: return HttpResponseBadRequest("Прикрепите CSV с компаниями")
+    if f.size>40*1024*1024: return HttpResponseBadRequest("Максимальный размер CSV — 40 МБ")
+    try:
+        text=f.read().decode("utf-8-sig")
+        reader=csv.DictReader(io.StringIO(text),delimiter=";" if text.count(";")>text.count(",") else ",")
+        if not reader.fieldnames: return HttpResponseBadRequest("CSV не содержит заголовков")
+        rows=list(reader)
+    except Exception as exc: return HttpResponseBadRequest("Не удалось прочитать CSV: "+type(exc).__name__)
+    def truth(value):
+        return str(value or "").strip().lower() in {"1","true","да","yes","y","есть"}
+    def val(row,*keys):
+        for key in keys:
+            x=row.get(key)
+            if x is not None and str(x).strip() not in {"","nan","None","null"}: return str(x).strip()
+        return ""
+    imported=0; skipped=0; errors=[]
+    for idx,row in enumerate(rows[:100000],start=2):
+        cid=val(row,"SYNTHETIC_U","company_id","COMPANY_ID")
+        if not cid: skipped+=1; continue
+        revenue_raw=val(row,"REVENUE_COMPANY","revenue_rub")
+        try: revenue=float(revenue_raw.replace(" ","").replace(",", ".")) if revenue_raw else None
+        except ValueError: revenue=None
+        products=[]
+        for field,label in [("CL_PRODUCT_RKO_MARK","settlement_account"),("CL_PRODUCT_GAR_MARK","guarantees"),("CL_PRODUCT_LOA_MARK","credit"),("CL_PRODUCT_LEA_MARK","leasing"),("CL_PRODUCT_DEP_MARK","deposits"),("CL_PRODUCT_ZPP_MARK","payroll_project"),("FACTORING_MARK","factoring")]:
+            if truth(row.get(field)): products.append(label)
+        export=val(row,"FTS_COUNTRY_NAME")
+        facts={k:val(row,k) for k in ["CL_TYPE","FTS_FLAG","NEGATIVEMARK","ORG_TYPE","OKFS_NAME"] if val(row,k)}
+        provenance={k:"Исходный CSV: "+f.name for k in ["industry","okved_code","revenue_rub","products","export_countries","region","city","group_id"]}
+        defaults={"name":val(row,"MAINOKVED_NAME") or "Компания "+cid,"industry":val(row,"MAINOKVED_NAME"),"okved_code":val(row,"MAINOKVED_CODE"),"revenue_rub":revenue,"employee_band":val(row,"AMOUNT_WORKERS_FNS_GRADATION","AMOUNT_WORKERS_SPARK_GRADATION"),"region":val(row,"REGION","RC_NAME"),"city":val(row,"CITY","CITY_NAME"),"company_age_band":val(row,"COMPANY_AGE_YEARS_GRADATION"),"development_stage":val(row,"ECO_MARK_LABEL"),"group_id":val(row,"GROUP_ID"),"products":products,"export_countries":[export] if export else [],"known_facts":facts,"profile_provenance":provenance,"is_demo":False}
+        try:
+            Company.objects.update_or_create(company_id=cid,defaults=defaults); imported+=1
+        except Exception as exc: errors.append({"row":idx,"error":type(exc).__name__})
+    return JsonResponse({"ok":True,"imported":imported,"skipped":skipped,"errors":errors[:20],"message":"Профили сохранены. Исходные значения и происхождение указаны; платёжные связи импортируются отдельно и здесь не рассчитываются."})
