@@ -1,0 +1,8 @@
+from django.db import migrations, models
+class Migration(migrations.Migration):
+    initial = True
+    dependencies = []
+    operations = [
+        migrations.CreateModel(name="NewsItem", fields=[("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")), ("title", models.CharField(max_length=300)), ("source", models.CharField(max_length=120)), ("category", models.CharField(db_index=True, max_length=80)), ("published_at", models.DateTimeField(db_index=True)), ("summary", models.TextField()), ("sentiment", models.CharField(choices=[("positive", "Позитивный"), ("neutral", "Нейтральный"), ("negative", "Негативный")], db_index=True, default="neutral", max_length=12)), ("relevance", models.PositiveSmallIntegerField(default=50)), ("url", models.URLField(blank=True)), ("is_demo", models.BooleanField(db_index=True, default=True))], options={"ordering": ["-published_at"]}),
+        migrations.CreateModel(name="BusinessSignal", fields=[("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")), ("title", models.CharField(max_length=240)), ("horizon", models.CharField(max_length=80)), ("severity", models.CharField(choices=[("high", "Высокий"), ("medium", "Средний"), ("low", "Низкий")], default="medium", max_length=10)), ("confidence", models.PositiveSmallIntegerField(default=70)), ("impact_area", models.CharField(max_length=120)), ("rationale", models.TextField()), ("next_step", models.CharField(max_length=300)), ("source_count", models.PositiveSmallIntegerField(default=1)), ("created_at", models.DateTimeField(auto_now_add=True)), ("is_demo", models.BooleanField(default=True))], options={"ordering": ["-confidence", "-created_at"]})
+    ]
