@@ -142,3 +142,15 @@ class ChatMessage(models.Model):
     content=models.TextField()
     citations=models.JSONField(default=list,blank=True)
     created_at=models.DateTimeField(default=timezone.now)
+
+class PaymentRelationship(models.Model):
+    payer=models.ForeignKey(Company,on_delete=models.CASCADE,related_name="outgoing_payments")
+    beneficiary=models.ForeignKey(Company,on_delete=models.CASCADE,related_name="incoming_payments")
+    payment_amount=models.DecimalField(max_digits=22,decimal_places=2,null=True,blank=True)
+    payment_count=models.PositiveBigIntegerField(null=True,blank=True)
+    source_file=models.CharField(max_length=240,blank=True)
+    imported_at=models.DateTimeField(default=timezone.now)
+    is_demo=models.BooleanField(default=False)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=["payer","beneficiary","source_file"],name="uniq_payment_pair_source")]
+        indexes=[models.Index(fields=["payer","beneficiary"])]
