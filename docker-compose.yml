@@ -6,8 +6,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-alfa_news}
       POSTGRES_USER: ${POSTGRES_USER:-alfa_news}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    # PostgreSQL is intentionally internal-only. Django reaches it via db:5432
+    # on the Compose network, so a host port mapping is not required.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 5s
   web:
     build: .
     restart: unless-stopped
@@ -23,7 +24,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
     ports:
-      - "${WEB_PORT:-8000}:8000"
+      - "127.0.0.1:${WEB_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
