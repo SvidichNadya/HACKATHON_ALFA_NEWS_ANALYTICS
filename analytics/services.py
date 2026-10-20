@@ -1,4 +1,4 @@
-"""Explainable bounded analysis pipeline; no autonomous third-party agent framework."""
+"""Bounded, explainable analysis pipeline; no third-party autonomous-agent framework."""
 import hashlib,json,os,re,time,urllib.request
 from django.db import transaction
 from django.utils import timezone
@@ -13,8 +13,7 @@ def sentiment(text):
  return "negative" if n>p else "positive" if p>n else "neutral"
 def relevance(item,company):
  text=(item.title+" "+item.summary+" "+item.category).lower(); score=12; reasons=[]
- terms=set(re.findall(r"[a-zа-яё]{4,}",(company.industry+" "+company.okved_code).lower()))
- hits=[t for t in terms if t in text]
+ terms=set(re.findall(r"[a-zа-яё]{4,}",(company.industry+" "+company.okved_code).lower())); hits=[t for t in terms if t in text]
  if hits: score+=25; reasons.append("Совпадают отраслевые признаки: "+", ".join(hits[:4]))
  ptext=(str(company.products)+" "+json.dumps(company.known_facts,ensure_ascii=False)).lower()
  for terms2,why in [(["credit","кредит","ставк","финансирован"],"финансирование"),(["экспорт","импорт","валют","поставк"],"внешняя торговля"),(["leasing","лизинг","оборудован"],"лизинг")]:
@@ -35,13 +34,12 @@ def llm_json(prompt):
  except Exception as e: return None,"LLM недоступна; rule-based fallback ("+type(e).__name__+")."
 def analyze_company(company,question=None):
  start=time.monotonic(); plan=["Получить профиль компании","Найти и дедуплицировать новости","Найти материалы BANK_ANALYSIS","Рассчитать объяснимую релевантность","Сформировать сценарии и неизвестные данные","Проверить результат и сохранить трассу"]
- trace=[{"step":"company_profile","status":"ok","detail":"Загружен профиль; неизвестные значения не заполняются предположениями.","company_id":company.company_id,"industry":company.industry,"group_id":company.group_id,"provenance":company.profile_provenance}]
+ trace=[{"step":"company_profile","status":"ok","detail":"Профиль загружен; неизвестные значения не заполняются предположениями.","company_id":company.company_id,"industry":company.industry,"group_id":company.group_id,"provenance":company.profile_provenance}]
  raw=list(NewsItem.objects.order_by("-published_at")[:250]); unique={}
  for n in raw: unique.setdefault(n.content_hash or hashlib.sha256(n.title.lower().encode()).hexdigest(),n)
  ranked=sorted(((relevance(n,company)[0],n,relevance(n,company)[1]) for n in unique.values()),key=lambda x:(x[0],x[1].published_at),reverse=True)
  trace.append({"step":"news_search","status":"ok","detail":f"Проверено {len(unique)} уникальных публикаций, лимит 250.","count":len(unique)})
- tokens=set(re.findall(r"[a-zа-яё]{4,}",(company.industry+" "+str(company.products)+" "+(question or "")).lower()))
- bank=[]
+ tokens=set(re.findall(r"[a-zа-яё]{4,}",(company.industry+" "+str(company.products)+" "+(question or "")).lower())); bank=[]
  for d in SourceDocument.objects.filter(kind="bank_analysis").order_by("-published_at")[:100]:
   txt=(d.title+" "+d.content).lower(); overlap=sorted(t for t in tokens if t in txt)
   if overlap or any(k in txt for k in ("ставк","инфляц","макро","рынок")):
@@ -56,8 +54,7 @@ def analyze_company(company,question=None):
   if any(k in txt for k in ("ставк","кредит","финансирован","инфляц","стоимост","издерж","поставк","экспорт","валют")):
    mechanisms.append({"type":"SCENARIO","text":"Если внешний фактор затрагивает закупки, финансирование или продажи компании, он может повлиять на себестоимость либо потребность в оборотном капитале.","conditions":["Подтвердить фактическую экспозицию","Проверить договорные условия и горизонт"],"source_ids":[f"news:{n.id}"],"confidence":"low"})
    risks.append({"type":"SCENARIO","text":"Потенциальное давление на затраты или денежный поток при наличии соответствующей экспозиции.","conditions":["Фактор действительно затрагивает компанию","Нет компенсирующих условий или хеджирования"],"source_ids":[f"news:{n.id}"]})
-  if any(k in txt for k in ("рост спрос","цифров","расширен","новые рынки","инвестицион")):
-   opportunities.append({"type":"SCENARIO","text":"Можно проверить возможность пересмотра планов развития, если тенденция подтверждается в целевом сегменте.","conditions":["Нужно подтверждение на целевом рынке"],"source_ids":[f"news:{n.id}"]})
+  if any(k in txt for k in ("рост спрос","цифров","расширен","новые рынки","инвестицион")): opportunities.append({"type":"SCENARIO","text":"Можно проверить возможность пересмотра планов развития, если тенденция подтверждается в целевом сегменте.","conditions":["Нужно подтверждение на целевом рынке"],"source_ids":[f"news:{n.id}"]})
   checks.append("Проверить, затрагивает ли событие фактические договоры, географию и финансовые показатели компании.")
  if not company.industry: unknown.append("Не указан основной вид деятельности/ОКВЭД.")
  if company.revenue_rub is None: unknown.append("Нет данных о выручке; масштаб воздействия оценить нельзя.")
@@ -66,18 +63,17 @@ def analyze_company(company,question=None):
  if not bank or all(x["is_demo"] for x in bank): unknown.append("Нет загруженной оригинальной аналитики Альфа-Банка. Демонстрационные материалы не являются позицией банка.")
  refs=[{"id":f"news:{n.id}","type":"FACT","title":n.title,"source":n.source,"url":n.url,"published_at":n.published_at.isoformat(),"excerpt":n.summary[:500],"synthetic":n.is_demo} for n in chosen]
  refs += [{"id":f"bank:{d['id']}","type":"BANK_ANALYSIS","title":d["title"],"source":d["source"],"url":d["url"],"locator":d["locator"],"excerpt":d["excerpt"],"synthetic":d["is_demo"]} for d in bank]
- best=ranked[0][0] if ranked else 0
- title="Проверьте внешние факторы для "+(company.industry or "бизнеса компании")
+ best=ranked[0][0] if ranked else 0; title="Проверьте внешние факторы для "+(company.industry or "бизнеса компании")
  summary=f"Отобрано {len(chosen)} публикаций для профиля «{company.name}». Это аналитические гипотезы, а не подтверждение ущерба. Полнота вывода ограничена доступными признаками компании."
  context={"company":{"id":company.company_id,"name":company.name,"industry":company.industry,"okved":company.okved_code,"revenue":str(company.revenue_rub) if company.revenue_rub is not None else None,"region":company.region,"products":company.products,"exports":company.export_countries,"facts":company.known_facts},"question":question,"news":[{"id":n.id,"title":n.title,"summary":n.summary,"source":n.source,"url":n.url} for n in chosen[:8]],"bank_documents":bank,"unknowns":unknown,"checks":checks}
  result,llm_status=llm_json("Верни JSON: title, summary, risks, opportunities, recommended_checks, unknowns, impact_mechanisms. Не придумывай факты и ссылки. Контекст: "+json.dumps(context,ensure_ascii=False)[:18000])
  if result:
   title=str(result.get("title") or title)[:300]; summary=str(result.get("summary") or summary)[:5000]
-  for key,target in [("risks","risks"),("opportunities","opportunities"),("recommended_checks","checks"),("unknowns","unknown"),("impact_mechanisms","mechanisms")]:
-   if isinstance(result.get(key),list): 
-    if target=="unknown": unknown=result[key]
-    elif target=="checks": checks=result[key]
-    else: locals()[target]=result[key]
+  if isinstance(result.get("risks"),list): risks=result["risks"]
+  if isinstance(result.get("opportunities"),list): opportunities=result["opportunities"]
+  if isinstance(result.get("recommended_checks"),list): checks=result["recommended_checks"]
+  if isinstance(result.get("unknowns"),list): unknown=result["unknowns"]
+  if isinstance(result.get("impact_mechanisms"),list): mechanisms=result["impact_mechanisms"]
  trace.append({"step":"interpretation","status":"ok","detail":llm_status,"selected_news":[n.id for n in chosen]})
  trace.append({"step":"self_check","status":"ok","detail":"Проверены происхождение источников, обязательные поля и пробелы. Причинность и конкретный финансовый эффект не утверждаются без оснований."})
  priority="high" if best>=75 and not unknown else "medium" if best>=45 else "watch"; confidence="medium" if len(chosen)>=3 and len(unknown)<=1 else "low"
