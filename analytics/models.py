@@ -153,4 +153,3 @@ class PaymentRelationship(models.Model):
     is_demo=models.BooleanField(default=False)
     class Meta:
         constraints=[models.UniqueConstraint(fields=["payer","beneficiary","source_file"],name="uniq_payment_pair_source")]
-        indexes=[models.Index(fields=["payer","beneficiary"])]
