@@ -2,7 +2,7 @@
 import hashlib,json,os,re,time,urllib.request
 from django.db import transaction
 from django.utils import timezone
-from .models import AgentRun,Insight,NewsItem,SourceDocument
+from .models import AgentRun,Insight,NewsItem,SourceDocument,PaymentRelationship
 ALLOWED_MODELS={"Gemma 4 26B A4B","GLM-5.3-Flash","Qwen3.6 35B A3B","DeepSeek-V4.1-Flash","Qwen3-VL-30B-A3B-Instruct","Kimi-K2.6"}
 TOPICS={"Финансирование":["ставк","кредит","финансирован","облигац","ликвидност","заемн"],"Инфляция и издержки":["инфляц","сырь","стоимост","издерж","цена","затрат","ресурс"],"Внешняя торговля":["экспорт","импорт","тамож","внешн","валют","поставк","логист"],"Регулирование":["регуляц","закон","налог","требован","регулятор","норматив"],"Отрасль и рынок":["отрасл","конкурен","спрос","рынок","потреблен"],"Технологии":["технолог","цифров","автоматизац","кибер","алгоритм"]}
 def classify(text):
@@ -35,6 +35,19 @@ def llm_json(prompt):
 def analyze_company(company,question=None):
  start=time.monotonic(); plan=["Получить профиль компании","Найти и дедуплицировать новости","Найти материалы BANK_ANALYSIS","Рассчитать объяснимую релевантность","Сформировать сценарии и неизвестные данные","Проверить результат и сохранить трассу"]
  trace=[{"step":"company_profile","status":"ok","detail":"Профиль загружен; неизвестные значения не заполняются предположениями.","company_id":company.company_id,"industry":company.industry,"group_id":company.group_id,"provenance":company.profile_provenance}]
+ group_members=list(company.__class__.objects.filter(group_id=company.group_id).exclude(group_id="").values_list("company_id","name")) if company.group_id else [(company.company_id,company.name)]
+ outgoing=list(PaymentRelationship.objects.filter(payer=company).select_related("beneficiary"))
+ incoming=list(PaymentRelationship.objects.filter(beneficiary=company).select_related("payer"))
+ def concentration(rows, amount_field):
+  vals=[float(getattr(r,amount_field)) for r in rows if getattr(r,amount_field) is not None and float(getattr(r,amount_field))>=0]
+  if vals and sum(vals)>0:return round(max(vals)/sum(vals),4),"amount"
+  counts=[int(r.payment_count or 0) for r in rows]
+  if sum(counts)>0:return round(max(counts)/sum(counts),4),"count"
+  return None,"unavailable"
+ out_share,out_basis=concentration(outgoing,"payment_amount"); in_share,in_basis=concentration(incoming,"payment_amount")
+ payment_context={"outgoing_pairs":len(outgoing),"incoming_pairs":len(incoming),"outgoing_top_counterparty_share":out_share,"incoming_top_counterparty_share":in_share,"share_basis":out_basis if out_basis!="unavailable" else in_basis,"group_members":group_members}
+ trace.append({"step":"business_relationships","status":"ok","detail":"Учтены агрегированные наблюдаемые платежи и идентификатор группы. Платёжная связь не трактуется как договорная/критическая; временная динамика без дат не рассчитывается.","data":payment_context})
+
  raw=list(NewsItem.objects.order_by("-published_at")[:250]); unique={}
  for n in raw: unique.setdefault(n.content_hash or hashlib.sha256(n.title.lower().encode()).hexdigest(),n)
  ranked=sorted(((relevance(n,company)[0],n,relevance(n,company)[1]) for n in unique.values()),key=lambda x:(x[0],x[1].published_at),reverse=True)
@@ -46,6 +59,12 @@ def analyze_company(company,question=None):
    bank.append({"id":d.id,"title":d.title,"source":d.source_name,"locator":d.locator,"url":d.url,"excerpt":d.content[:900],"type":"BANK_ANALYSIS","match_terms":overlap[:10],"is_demo":d.is_demo})
  trace.append({"step":"bank_retrieval","status":"ok","detail":f"Найдено документов BANK_ANALYSIS: {len(bank)}. Синтетические документы явно помечены.","count":len(bank)})
  chosen=[]; facts=[]; exposure=[]; mechanisms=[]; risks=[]; opportunities=[]; checks=[]; unknown=[]
+ if outgoing or incoming:
+  exposure.append({"type":"FACT","text":f"В загруженном агрегированном наборе есть {len(outgoing)} исходящих и {len(incoming)} входящих платёжных отношений.","company_facts":["PAYER/BENEFICIARY"],"source_ids":["payments:aggregated-csv"]})
+  for label,share,basis in [("исходящие",out_share,out_basis),("входящие",in_share,in_basis)]:
+   if share is not None and share>=0.5:
+    mechanisms.append({"type":"SCENARIO","text":f"В наблюдаемом наборе {label} платежей доля крупнейшего контрагента составляет {share:.0%} по "+("объёму PAY_AMT" if basis=="amount" else "количеству PAY_CNT")+"; это может быть поводом проверить концентрацию, но не доказывает критическую зависимость.","conditions":["Проверить полноту периода и набора платежей","Сверить с договорами, заменяемостью и долей контрагента в закупках/выручке"],"source_ids":["payments:aggregated-csv"],"confidence":"low"})
+
  for score,n,why in ranked[:12]:
   if score<20: continue
   chosen.append(n); facts.append({"type":"FACT","text":n.title+" — "+n.summary,"source_ids":[f"news:{n.id}"],"published_at":n.published_at.isoformat(),"synthetic":n.is_demo})
@@ -65,7 +84,7 @@ def analyze_company(company,question=None):
  refs += [{"id":f"bank:{d['id']}","type":"BANK_ANALYSIS","title":d["title"],"source":d["source"],"url":d["url"],"locator":d["locator"],"excerpt":d["excerpt"],"synthetic":d["is_demo"]} for d in bank]
  best=ranked[0][0] if ranked else 0; title="Проверьте внешние факторы для "+(company.industry or "бизнеса компании")
  summary=f"Отобрано {len(chosen)} публикаций для профиля «{company.name}». Это аналитические гипотезы, а не подтверждение ущерба. Полнота вывода ограничена доступными признаками компании."
- context={"company":{"id":company.company_id,"name":company.name,"industry":company.industry,"okved":company.okved_code,"revenue":str(company.revenue_rub) if company.revenue_rub is not None else None,"region":company.region,"products":company.products,"exports":company.export_countries,"facts":company.known_facts},"question":question,"news":[{"id":n.id,"title":n.title,"summary":n.summary,"source":n.source,"url":n.url} for n in chosen[:8]],"bank_documents":bank,"unknowns":unknown,"checks":checks}
+ context={"company":{"id":company.company_id,"name":company.name,"industry":company.industry,"okved":company.okved_code,"revenue":str(company.revenue_rub) if company.revenue_rub is not None else None,"region":company.region,"products":company.products,"exports":company.export_countries,"facts":company.known_facts},"question":question,"news":[{"id":n.id,"title":n.title,"summary":n.summary,"source":n.source,"url":n.url} for n in chosen[:8]],"bank_documents":bank,"payment_relationships":payment_context,"unknowns":unknown,"checks":checks}
  result,llm_status=llm_json("Верни JSON: title, summary, risks, opportunities, recommended_checks, unknowns, impact_mechanisms. Не придумывай факты и ссылки. Контекст: "+json.dumps(context,ensure_ascii=False)[:18000])
  if result:
   title=str(result.get("title") or title)[:300]; summary=str(result.get("summary") or summary)[:5000]
