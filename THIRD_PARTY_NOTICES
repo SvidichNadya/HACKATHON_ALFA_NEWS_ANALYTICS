@@ -1,0 +1,15 @@
+# THIRD_PARTY_NOTICES
+
+This is a contest prototype. Pin and review exact dependency licenses before commercial use.
+- Python: PSF License.
+- Django: BSD-3-Clause.
+- psycopg: LGPL-3.0-or-later; verify binary package notices for the pinned build.
+- Gunicorn: MIT.
+- WhiteNoise: MIT.
+- PostgreSQL: PostgreSQL License.
+- pypdf: BSD-3-Clause.
+- python-docx: MIT.
+- Docker / Docker Compose: Apache-2.0 / component-specific terms.
+- No LLM is bundled. Optional model calls require an operator-configured endpoint and only allow contest-approved model names.
+- Demo companies, news and bank-analysis examples are synthetic; they are not real news, clients or official Alfa-Bank statements.
+- Imported materials and feeds must comply with licenses, access terms, privacy obligations and competition rules.
