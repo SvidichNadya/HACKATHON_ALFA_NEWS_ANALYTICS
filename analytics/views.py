@@ -38,7 +38,7 @@ def _json(i):
 @csrf_protect
 def analyze_api(request,company_id):
  c=get_object_or_404(Company,pk=company_id); i=analyze_company(c,request.POST.get("question","").strip()[:2000] or None); request.session["company_id"]=c.pk
- return JsonResponse({"insight":_json(i),"run_id":c.agent_runs.first().pk})
+ return JsonResponse({"insight":_json(i),"run_id":c.agent_runs.order_by("-created_at").first().pk})
 @require_GET
 def insight_api(request,insight_id):
  i=get_object_or_404(Insight.objects.select_related("company"),pk=insight_id)
@@ -115,7 +115,7 @@ def import_bank_api(request):
  return JsonResponse({"ok":True,"document_id":d.pk,"created":created,"characters":len(content),"message":"Материал сохранён отдельно как BANK_ANALYSIS."})
 @require_GET
 def agent_runs_api(request):
- c=_company(request); qs=AgentRun.objects.filter(company=c) if c else AgentRun.objects.none()
+ c=_company(request); qs=AgentRun.objects.filter(company=c).order_by("-created_at") if c else AgentRun.objects.none()
  return JsonResponse({"runs":[{"id":r.pk,"insight_id":r.insight_id,"status":r.status,"plan":r.plan,"trace":r.trace,"model":r.model_name,"duration_ms":r.duration_ms,"created_at":r.created_at.isoformat()} for r in qs[:50]})
 
 @require_POST
