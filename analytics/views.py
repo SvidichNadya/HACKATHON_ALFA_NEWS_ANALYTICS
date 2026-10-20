@@ -6,7 +6,7 @@ from django.shortcuts import render,get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET,require_POST
 from django.views.decorators.csrf import csrf_protect
-from .models import BusinessSignal,NewsItem,Company,SourceDocument,Insight,AgentRun,Feedback,ChatMessage
+from .models import BusinessSignal,NewsItem,Company,SourceDocument,Insight,AgentRun,Feedback,ChatMessage,PaymentRelationship
 from .services import analyze_company,answer_question,classify,sentiment
 def _company(request):
  companies=list(Company.objects.all()); selected=request.GET.get("company") or request.session.get("company_id")
@@ -157,3 +157,35 @@ def import_company_csv_api(request):
             Company.objects.update_or_create(company_id=cid,defaults=defaults); imported+=1
         except Exception as exc: errors.append({"row":idx,"error":type(exc).__name__})
     return JsonResponse({"ok":True,"imported":imported,"skipped":skipped,"errors":errors[:20],"message":"Профили сохранены. Исходные значения и происхождение указаны; платёжные связи импортируются отдельно и здесь не рассчитываются."})
+
+@require_POST
+@csrf_protect
+def import_payments_csv_api(request):
+    """Import aggregated payment relationships; no inference of contractual criticality."""
+    import csv
+    f=request.FILES.get("file")
+    if not f: return HttpResponseBadRequest("Прикрепите CSV с платежными связями")
+    if f.size>80*1024*1024: return HttpResponseBadRequest("Максимальный размер файла — 80 МБ")
+    try:
+        raw=f.read().decode("utf-8-sig")
+        reader=csv.DictReader(io.StringIO(raw),delimiter=";" if raw.count(";")>raw.count(",") else ",")
+        required={"PAYER","BENEFICIARY"}
+        if not reader.fieldnames or not required.issubset(set(reader.fieldnames)): return HttpResponseBadRequest("Ожидаются столбцы PAYER и BENEFICIARY")
+        rows=list(reader)
+    except Exception as exc: return HttpResponseBadRequest("Не удалось прочитать CSV: "+type(exc).__name__)
+    companies={c.company_id:c for c in Company.objects.all()}
+    created=updated=skipped=0; batch={}
+    for row in rows[:500000]:
+        payer=str(row.get("PAYER") or "").strip(); beneficiary=str(row.get("BENEFICIARY") or "").strip()
+        if not payer or not beneficiary or payer not in companies or beneficiary not in companies or payer==beneficiary:
+            skipped+=1; continue
+        try:
+            amount=str(row.get("PAY_AMT") or "").strip().replace(" ","").replace(",",".")
+            count=str(row.get("PAY_CNT") or "").strip()
+            batch[(payer,beneficiary)]=(float(amount) if amount else None,int(float(count)) if count else None)
+        except ValueError:
+            skipped+=1
+    for (payer,beneficiary),(amount,count) in batch.items():
+        obj,was_created=PaymentRelationship.objects.update_or_create(payer=companies[payer],beneficiary=companies[beneficiary],source_file=f.name[:240],defaults={"payment_amount":amount,"payment_count":count,"is_demo":False})
+        created+=int(was_created); updated+=int(not was_created)
+    return JsonResponse({"ok":True,"created":created,"updated":updated,"skipped":skipped,"message":"Импортированы только агрегированные наблюдаемые платежи. Они не доказывают контрактную или критическую зависимость; временная динамика без дат не рассчитывается."})
