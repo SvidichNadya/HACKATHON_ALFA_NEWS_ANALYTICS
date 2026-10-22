@@ -116,7 +116,7 @@ def import_bank_api(request):
 @require_GET
 def agent_runs_api(request):
  c=_company(request); qs=AgentRun.objects.filter(company=c).order_by("-created_at") if c else AgentRun.objects.none()
- return JsonResponse({"runs":[{"id":r.pk,"insight_id":r.insight_id,"status":r.status,"plan":r.plan,"trace":r.trace,"model":r.model_name,"duration_ms":r.duration_ms,"created_at":r.created_at.isoformat()} for r in qs[:50]})
+ return JsonResponse({"runs":[{"id":r.pk,"insight_id":r.insight_id,"status":r.status,"plan":r.plan,"trace":r.trace,"model":r.model_name,"duration_ms":r.duration_ms,"created_at":r.created_at.isoformat()} for r in qs[:50]]})
 
 @require_POST
 @csrf_protect
