@@ -28,7 +28,9 @@ class Command(BaseCommand):
         for i,(title,source,category,sentiment,relevance,summary) in enumerate(items):
             h=hashlib.sha256(" ".join(title.lower().split()).encode()).hexdigest()
             NewsItem.objects.update_or_create(content_hash=h,defaults={"title":title,"source":source,"category":category,"sentiment":sentiment,"relevance":relevance,"summary":summary,"published_at":now-timedelta(hours=i*3+1),"event_date":None,"url":"","is_demo":True})
-        valid_hashes=[hashlib.sha256(" ".join(x[0].lower().split()).encode()).hexdigest() for x in items]\n        NewsItem.objects.filter(is_demo=True).exclude(content_hash__in=valid_hashes).delete()\n        bank_examples=[
+        valid_hashes=[hashlib.sha256(" ".join(x[0].lower().split()).encode()).hexdigest() for x in items]
+        NewsItem.objects.filter(is_demo=True).exclude(content_hash__in=valid_hashes).delete()
+        bank_examples=[
           ("Иллюстративный пример банковской аналитики: ключевая ставка","Условный материал для демонстрации схемы импорта","В учебном примере высокая ставка может означать, что стоимость заёмного финансирования снижается медленнее ожиданий. Это НЕ официальная позиция Альфа-Банка и НЕ реальный аналитический материал. Для использования в конкурсном выводе замените этот документ предоставленным организаторами оригиналом."),
           ("Иллюстративный пример банковской аналитики: инфляция и издержки","Условный материал для демонстрации схемы импорта","В учебном примере динамика инфляции рассматривается как фактор закупочных затрат. Это синтетический текст, не официальный материал и не экспертная позиция Альфа-Банка. Импортируйте реальный документ из комплекта кейса.")
         ]
@@ -38,5 +40,6 @@ class Command(BaseCommand):
         signals=[
           {"title":"Сочетание дорогого финансирования и ресурсных затрат требует проверки","horizon":"Сценарий · ближайшие кварталы","severity":"high","confidence":55,"impact_area":"Финансирование и себестоимость","rationale":"Демонстрационная гипотеза. Значимость зависит от реальных условий кредитов, закупочных договоров и доли соответствующих затрат; эти параметры в профиле не подтверждены.","next_step":"Проверить график финансирования, условия пересмотра ставок и долю чувствительных затрат","source_count":2},
           {"title":"Внешнеторговая экспозиция может менять требования к оборотному капиталу","horizon":"Сценарий · 1–2 квартала","severity":"medium","confidence":45,"impact_area":"Поставки и расчёты","rationale":"Гипотеза актуальна только для компании с подтверждёнными экспортными/импортными операциями; наличие страны в синтетическом профиле само по себе не доказывает объём торговли.","next_step":"Подтвердить долю внешнеторговых операций, валюту контрактов и сроки расчётов","source_count":2}]
-        BusinessSignal.objects.filter(is_demo=True).exclude(title__in=[x["title"] for x in signals]).delete()\n        for item in signals: BusinessSignal.objects.get_or_create(title=item["title"],is_demo=True,defaults=item)
+        BusinessSignal.objects.filter(is_demo=True).exclude(title__in=[x["title"] for x in signals]).delete()
+        for item in signals: BusinessSignal.objects.get_or_create(title=item["title"],is_demo=True,defaults=item)
         self.stdout.write(self.style.SUCCESS("Synthetic dataset is ready; all demo bank documents are explicitly marked as synthetic."))
