@@ -4,5 +4,6 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN python -m pip install --disable-pip-version-check -r requirements.txt
 COPY . .
+RUN chmod +x /app/docker-entrypoint.sh
 EXPOSE 8000
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_demo && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
