@@ -1,8 +1,5 @@
-__pycache__/
-*.py[cod]
 .env
+var/
+__pycache__/
+*.pyc
 .venv/
-venv/
-staticfiles/
-media/
-.DS_Store

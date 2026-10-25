@@ -1,15 +1,25 @@
-# THIRD_PARTY_NOTICES
+Сторонние компоненты, модели, данные и смоделированные интеграции
 
-This is a contest prototype. Pin and review exact dependency licenses before commercial use.
-- Python: PSF License.
-- Django: BSD-3-Clause.
-- psycopg: LGPL-3.0-or-later; verify binary package notices for the pinned build.
-- Gunicorn: MIT.
-- WhiteNoise: MIT.
-- PostgreSQL: PostgreSQL License.
-- pypdf: BSD-3-Clause.
-- python-docx: MIT.
-- Docker / Docker Compose: Apache-2.0 / component-specific terms.
-- No LLM is bundled. Optional model calls require an operator-configured endpoint and only allow contest-approved model names.
-- Demo companies, news and bank-analysis examples are synthetic; they are not real news, clients or official Alfa-Bank statements.
-- Imported materials and feeds must comply with licenses, access terms, privacy obligations and competition rules.
+Python-библиотеки (лицензии — по данным дистрибутивов):
+  Flask 3.1.3, Werkzeug 3.1.7, Jinja2 3.1.6, MarkupSafe, itsdangerous, click, blinker — BSD-3-Clause (Pallets)
+  gunicorn 23.0.0 — MIT
+  pypdf 5.9.0 — BSD-3-Clause
+  python-docx 1.2.0 — MIT
+  lxml 6.0.2 — BSD-3-Clause
+  typing_extensions, packaging — PSF / Apache-2.0 / BSD
+Среда выполнения: Python 3.12 (PSF License), SQLite (public domain), образ python:3.12-slim.
+
+Фронтенд: собственный код без внешних библиотек и CDN; иконки нарисованы вручную как SVG-пути.
+Шрифт: в стеке указан «Styrene A» / «Alfa Sans» (проприетарные шрифты бренда, не поставляются); при их отсутствии используются системные шрифты.
+Фирменные элементы: красный цвет и логика интерфейса Альфа-Бизнеса воспроизведены по публичным описаниям; логотип банка не используется, знак в шапке — условный.
+
+Языковые модели: не поставляются. Подключаются через OpenAI-совместимый шлюз заказчика; допустимы только модели из приложения 3 кейса
+  (Gemma 4 26B A4B, GLM-5.3-Flash, Qwen3.6 35B A3B, DeepSeek-V4.1-Flash, Qwen3-VL-30B-A3B-Instruct, Kimi-K2.6). Имя вне списка отклоняется кодом.
+Внешние AI-сервисы, готовые агентные фреймворки и мультиагентные системы не используются: оркестрация, поиск (BM25), стеммер, дедупликация,
+ранжирование и проверка реализованы в этом репозитории.
+
+Данные и смоделированные интеграции:
+  data/samples/*.csv и данные в БД при первом запуске — синтетические, сгенерированы radar/seed/generate.py в схеме приложения 1 кейса.
+  Новости (radar/seed/corpus.py) — вымышленные материалы вымышленных изданий; адреса demo.invalid не существуют.
+  Аналитика «Альфа-Банка» в radar/seed/corpus.py — учебные образцы, не публикации банка; заменяются оригиналами из data/bank_analytics/.
+  Сбор RSS/HTML реализован (radar/ingest/web.py), но источники не настроены по умолчанию; интеграция с интернет-банком смоделирована интерфейсом-обёрткой «Альфа-Бизнес».

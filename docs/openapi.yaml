@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info: {title: Бизнес-радар API, version: "1.0"}
+servers: [{url: /}]
+components:
+  securitySchemes:
+    session: {type: apiKey, in: cookie, name: session}
+    csrf: {type: apiKey, in: header, name: X-CSRF-Token}
+security: [{session: []}]
+paths:
+  /api/login: {post: {summary: Вход, security: [], requestBody: {content: {application/json: {schema: {type: object, properties: {login: {type: string}, password: {type: string}}}}}}, responses: {"200": {description: ok}, "401": {description: неверные данные}, "429": {description: много неудачных попыток}}}}
+  /api/me: {get: {summary: Пользователь, доступные компании, роли, статус LLM (csrf-токен для записи), security: []}}
+  /api/companies: {get: {summary: Компании пользователя; q= для поиска (администратор)}}
+  /api/companies/{cid}/feed: {get: {summary: Персонализированная лента, каскады, изменения с прошлого просмотра, parameters: [{name: role, in: query, schema: {type: string}}]}}
+  /api/companies/{cid}/network: {get: {summary: Платёжное окружение для визуализации}}
+  /api/companies/{cid}/events/{eid}/insight: {get: {summary: Инсайт по событию (запускает агента; refresh=1 пересчитывает)}}
+  /api/companies/{cid}/cascades/{key}/analyze: {post: {summary: Полный разбор каскада, security: [{session: [], csrf: []}]}}
+  /api/companies/{cid}/analyze: {post: {summary: Анализ произвольной новости (text или url), security: [{session: [], csrf: []}]}}
+  /api/companies/{cid}/calc: {post: {summary: Расчёт чувствительности по допущениям пользователя, security: [{session: [], csrf: []}]}}
+  /api/insights/{id}: {get: {summary: Сохранённый инсайт с утверждениями и основаниями}}
+  /api/insights/{id}/chat: {get: {summary: История диалога}, post: {summary: Уточняющий вопрос, security: [{session: [], csrf: []}]}}
+  /api/insights/{id}/feedback: {post: {summary: "Оценка: useful | irrelevant | wrong | duplicate | not_my_company", security: [{session: [], csrf: []}]}}
+  /api/runs/{id}: {get: {summary: Трасса работы агента}}
+  /api/library: {get: {summary: Источники}}
+  /api/library/upload: {post: {summary: Загрузка PDF/DOCX/MD/TXT/CSV (администратор), security: [{session: [], csrf: []}]}}
+  /api/library/feed: {post: {summary: Сбор RSS/Atom по HTTPS (администратор), security: [{session: [], csrf: []}]}}
+  /api/metrics: {get: {summary: Метрики качества и работы агента}}
+  /api/evaluation: {get: {summary: Офлайн-оценка ранжирования}}
+  /api/health: {get: {summary: Проверка живости, security: []}}
