@@ -177,10 +177,11 @@ label.f { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); font-we
 .trace { display: grid; gap: 0; } .tr { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; position: relative; } .tr i { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); margin-top: 6px; } .tr.replan i, .tr.error i { background: var(--red); } .tr.llm i { background: transparent; border: 2px solid var(--ink); } .tr.verify i { border-radius: 2px; } .tr small { color: var(--ink-3); display: block; }
 
 /* ---------- forms / misc ---------- */
-.login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(380px, .95fr); }
-.login-art { background: var(--ink); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
-.login-art h1 { font-size: 40px; max-width: 16ch; } .login-art p { opacity: .7; max-width: 46ch; margin-top: 14px; } .login-art .sweep { position: absolute; right: -60px; bottom: -60px; width: 440px; max-width: none; opacity: .9; }
-.login-form { padding: 56px; display: grid; align-content: center; gap: 16px; max-width: 520px; width: 100%; margin: 0 auto; }
+.login { width: 100%; min-height: 100vh; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.login-art { min-width: 0; min-height: 100vh; min-height: 100svh; background: var(--ink); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+.login-art > div, .login-art > .small { position: relative; z-index: 1; }
+.login-art h1 { font-size: 40px; max-width: 16ch; } .login-art p { opacity: .7; max-width: 46ch; margin-top: 14px; } .login-art .sweep { position: absolute; left: 50%; top: 58%; right: auto; bottom: auto; transform: translate(-50%, -50%); width: min(42vw, 520px); max-width: none; opacity: .42; pointer-events: none; }
+.login-form { min-width: 0; padding: 56px; display: grid; align-content: center; gap: 16px; max-width: none; width: 100%; margin: 0; }
 .demo-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; } .demo-acc { display: flex; justify-content: space-between; gap: 10px; text-align: left; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); } .demo-acc:hover { border-color: var(--ink); }
 .err { color: var(--red); font-size: 14px; background: var(--red-soft); padding: 10px 12px; border-radius: 10px; }
 .empty { padding: 40px 20px; text-align: center; color: var(--ink-2); } .skel { background: linear-gradient(90deg, var(--line) 0, var(--surface-2) 50%, var(--line) 100%); background-size: 200% 100%; border-radius: 12px; animation: shimmer 1.4s linear infinite; }
@@ -206,5 +207,5 @@ label.f { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); font-we
   .shell { grid-template-columns: 1fr; } .side { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; top: auto; height: auto; flex-direction: row; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
   .brand, .nav .grp, .side-foot, .nav a.stub { display: none; } .nav { flex-direction: row; width: 100%; justify-content: space-around; overflow-x: auto; } .nav a { flex: none; } .nav a { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 8px; text-align: center; } .nav a.entry { margin: 0; }
   .page { padding: 18px 16px 110px; } .top { padding: 10px 16px; flex-wrap: wrap; } .hero { grid-template-columns: 1fr; } .hero .sweep { display: none; } .g2, .g3 { grid-template-columns: 1fr; }
-  .login { grid-template-columns: 1fr; } .login-art { padding: 32px; min-height: 280px; } .login-form { padding: 28px 20px; } .ev { grid-template-columns: 5px 1fr; } .ev .score { text-align: left; grid-column: 2; } h1 { font-size: 25px; }
+  .login { grid-template-columns: minmax(0, 1fr); } .login-art { padding: 32px; min-height: 280px; } .login-art .sweep { left: 50%; top: 58%; width: min(68vw, 360px); opacity: .3; } .login-form { padding: 28px 20px; } .ev { grid-template-columns: 5px 1fr; } .ev .score { text-align: left; grid-column: 2; } h1 { font-size: 25px; }
 }
