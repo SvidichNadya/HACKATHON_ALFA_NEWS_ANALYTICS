@@ -152,7 +152,18 @@ def create_app(db_path=None, bootstrap=True, llm_transport=None):
     @app.get("/api/me")
     def me():
         if not g.user:
-            return jsonify({"user": None, "demo_accounts": [{"login": a[0], "name": a[1], "role": ROLE_LABELS[a[2]]} for a in loader.ACCOUNTS] + [{"login": "jury", "name": "Эксперт жюри", "role": "доступ ко всем компаниям"}],
+            # Build the demo list from accounts that actually exist in this database.
+            # This keeps the login screen in sync with the selected dataset (contest or synthetic).
+            accounts = db.q("SELECT login, name, role, is_admin FROM users ORDER BY is_admin, name, login")
+            demo_accounts = [
+                {
+                    "login": a["login"],
+                    "name": a["name"],
+                    "role": "доступ ко всем компаниям" if a["is_admin"] else ROLE_LABELS.get(a["role"], a["role"]),
+                }
+                for a in accounts
+            ]
+            return jsonify({"user": None, "demo_accounts": demo_accounts,
                             "demo_password_hint": "см. README (RADAR_DEMO_PASSWORD)"}), 200
         u = g.user
         return jsonify({"user": {**u, "role_label": ROLE_LABELS.get(u["role"], u["role"])}, "csrf": session["csrf"], "roles": ROLE_LABELS,
