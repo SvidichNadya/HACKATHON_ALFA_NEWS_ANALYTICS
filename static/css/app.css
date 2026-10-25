@@ -178,9 +178,9 @@ label.f { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); font-we
 
 /* ---------- forms / misc ---------- */
 .login { width: 100%; min-height: 100vh; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-.login-art { min-width: 0; min-height: 100vh; min-height: 100svh; background: var(--ink); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+.login-art { min-width: 0; min-height: 100vh; min-height: 100svh; background: var(--ink); color: var(--red); padding: 56px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
 .login-art > div, .login-art > .small { position: relative; z-index: 1; }
-.login-art h1 { font-size: 40px; max-width: 16ch; } .login-art p { opacity: .7; max-width: 46ch; margin-top: 14px; } .login-art .sweep { position: absolute; left: 50%; top: 58%; right: auto; bottom: auto; transform: translate(-50%, -50%); width: min(42vw, 520px); max-width: none; opacity: .42; pointer-events: none; }
+.login-art h1 { font-size: 40px; max-width: 16ch; color: var(--red); } .login-art p { color: var(--red); opacity: .95; max-width: 46ch; margin-top: 14px; } .login-art .sweep { position: absolute; left: 50%; top: 58%; right: auto; bottom: auto; transform: translate(-50%, -50%); width: min(42vw, 520px); max-width: none; opacity: .42; pointer-events: none; }
 .login-form { min-width: 0; padding: 56px; display: grid; align-content: center; gap: 16px; max-width: none; width: 100%; margin: 0; }
 .demo-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; } .demo-acc { display: flex; justify-content: space-between; gap: 10px; text-align: left; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); } .demo-acc:hover { border-color: var(--ink); }
 .err { color: var(--red); font-size: 14px; background: var(--red-soft); padding: 10px 12px; border-radius: 10px; }
