@@ -34,7 +34,7 @@ a { color: inherit; }
 
 /* ---------- shell ---------- */
 .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: 100vh; }
-.side { position: sticky; top: 0; height: 100vh; background: var(--surface); border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.side { position: sticky; top: 0; height: 100vh; background: var(--surface); border-right: 1px solid var(--line); padding: 22px 14px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; text-decoration: none; }
 .brand-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--red); display: grid; place-items: center; flex: none; }
 .brand b { display: block; font-size: 16px; line-height: 1.1; letter-spacing: -.01em; } .brand small { font-size: 12px; color: var(--ink-3); display: block; }
